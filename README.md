@@ -7,6 +7,7 @@ Unlike the main launcher, there is no built-in browser. Due to this it is extrem
 - It is fully open source, unlike the other launcher (it is my first and only C# GUI project, and it is messy).
 - It supports **resuming of downloads** unlike the main launcher.
 - It is shiny and written in Golang <3
+- Due to it being written in Golang, it requires no runtimes or extra files. A single binary!
 - It does not use the registry and instead uses a file called (by default) game.json
 - It runs on way more machines compared to the other launcher which requires Windows 10+.
 - It runs on Mac OS and Linux (you'll still need Wine or an emulator to run Spellborn itself).
