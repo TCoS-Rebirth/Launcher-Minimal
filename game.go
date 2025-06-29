@@ -167,7 +167,7 @@ func updateVersion(newVersion string) error {
 	return nil
 }
 
-func downloadLatest(latest Latest) bool {
+func downloadLatest(latest Latest, keepDownload bool) bool {
 	// Download the latest version.
 	err := downloadFile(latest.File, "")
 	if err != nil {
@@ -184,6 +184,16 @@ func downloadLatest(latest Latest) bool {
 
 	// We downloaded the file, now let us extract it.
 	err = extractZip(latest.File)
+
+	if !keepDownload {
+		// Remove the file.
+		err := os.Remove(latest.File)
+		if err != nil {
+			slog.Error("Error removing file:", "file", err)
+		}
+	} else {
+		slog.Info("keep_downloads is set to true, not removing downloaded file.", "keep_downloads", keepDownload)
+	}
 
 	// Finally, let's create a gameInfo file.
 	game := Game{

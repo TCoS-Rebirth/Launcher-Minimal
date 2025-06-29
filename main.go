@@ -1,14 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 )
 
-// todo's/info:
-// -> wanneer er een game.json file is, die gebruiken. Anders zelf eentje maken.
-// sowieso die gebruiken he, waarom zoude in godsnaam elke keer een full download doen?
-
+// Configuration options
 var gameInfo string = "game.json"
 var fileServer string = "https://files.spellborn.org/"
 
@@ -16,6 +12,12 @@ func main() {
 
 	// Check if the game is installed or not.
 	installed := isInstalled()
+
+	// Get game information, if it is present.
+	gameInfo, err := getGameInfo()
+	if err != nil {
+		slog.Error("Error fetching gameInfo:", "gameInfo", err)
+	}
 
 	if !installed {
 		// Perform a clean installation.
@@ -26,15 +28,9 @@ func main() {
 		}
 
 		// Step two: pass the latest version through.
-		downloadLatest(latest)
+		downloadLatest(latest, gameInfo.KeepDownloads)
 
 		// The game should now be installed and ready for further steps.
-	}
-
-	// Now, lets parse gameInfo file so we can see what version is installed right now.
-	gameInfo, err := getGameInfo()
-	if err != nil {
-		slog.Error("Error fetching gameInfo:", "gameInfo", err)
 	}
 
 	// Fetch update information.
@@ -42,13 +38,12 @@ func main() {
 	if err != nil {
 		slog.Error("Error fetching updates:", "updates", err)
 	}
-	fmt.Println(fetchedUpdates)
 
 	// TODO: Make sure the downloaded file is deleted.
 	// TODO: Launch the game :-)
 
 	updateLoop(fetchedUpdates, gameInfo)
 
-	fmt.Println("Done.")
+	slog.Info("Finished update loop, launching game.")
 
 }

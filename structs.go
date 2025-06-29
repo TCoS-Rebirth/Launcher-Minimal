@@ -20,6 +20,8 @@ type Updates []struct {
 }
 
 type Game struct {
-	Path    string `json:"path"`
-	Version string `json:"version"`
+	Path          string `json:"path"`
+	Version       string `json:"version"`
+	KeepDownloads bool   `json:"keep_downloads"` // Assumed to be false by default
+	NoLaunch      bool   `json:"no_launch"`      // Assumed to be false by default
 }
