@@ -2,11 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"golang.org/x/sys/windows"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"syscall"
 	"time"
 )
 
@@ -212,6 +217,7 @@ func downloadLatest(latest Latest, keepDownload bool) bool {
 		return false
 	}
 	return true
+
 }
 
 // Returns true if game is installed, false if not.
@@ -251,7 +257,7 @@ func getGameInfo() (Game, error) {
 	return game, nil
 }
 
-func updateLoop(updates Updates, game Game) {
+func updateLoop(updates Updates, game Game, keepDownload bool) {
 	for {
 		foundUpdate := false
 		for _, update := range updates {
@@ -260,6 +266,14 @@ func updateLoop(updates Updates, game Game) {
 				downloadFile(update.Update.File, "")
 				extractZip(update.Update.File)
 				slog.Info("Update downloaded and extracted.", "version", update.Update.Version)
+				if !keepDownload {
+					err := os.Remove(update.Update.File)
+					if err != nil {
+						slog.Error("Error removing file:", "file", err)
+					}
+				} else {
+					slog.Info("keep_downloads is set to true, not removing downloaded file.", "keep_downloads", keepDownload)
+				}
 				updateVersion(update.Update.Version)
 
 				// Update our local game info after applying the update
@@ -279,4 +293,50 @@ func updateLoop(updates Updates, game Game) {
 			break // No more updates apply to our version
 		}
 	}
+}
+
+func launchGame() error {
+	// Get the game exe file.
+	exePath := filepath.Join("bin", "client", "Sb_client.exe")
+
+	// Convert to absolute path.
+	absPath, err := filepath.Abs(exePath)
+	if err != nil {
+		slog.Error("Failed to get absolute path:", "error", err)
+		return err
+	}
+
+	slog.Info("Launching game:", "path", absPath)
+
+	exePath = absPath
+
+	cmd := exec.Command(exePath)
+	cmd.Dir = filepath.Dir(exePath)
+
+	if runtime.GOOS == "windows" {
+		verb := "runas"
+		verbPtr, _ := syscall.UTF16PtrFromString(verb)
+		exePath, _ := syscall.UTF16PtrFromString(exePath)
+		argPtr, _ := syscall.UTF16PtrFromString("")
+		cwdPtr, _ := syscall.UTF16PtrFromString("")
+		err := windows.ShellExecute(0, verbPtr, exePath, argPtr, cwdPtr, 1)
+		if err != nil {
+			slog.Error("Failed to launch game:", "error", err)
+			return err
+		}
+	} else {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    false,
+			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+			// Request elevation
+
+		}
+		err = cmd.Start()
+		if err != nil {
+			slog.Error("Failed to launch game:", "error", err)
+			return err
+		}
+	}
+
+	return nil
 }
