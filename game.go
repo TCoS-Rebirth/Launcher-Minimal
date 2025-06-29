@@ -217,6 +217,7 @@ func downloadLatest(latest Latest, keepDownload bool) bool {
 		return false
 	}
 	return true
+
 }
 
 // Returns true if game is installed, false if not.
@@ -256,7 +257,7 @@ func getGameInfo() (Game, error) {
 	return game, nil
 }
 
-func updateLoop(updates Updates, game Game) {
+func updateLoop(updates Updates, game Game, keepDownload bool) {
 	for {
 		foundUpdate := false
 		for _, update := range updates {
@@ -265,6 +266,14 @@ func updateLoop(updates Updates, game Game) {
 				downloadFile(update.Update.File, "")
 				extractZip(update.Update.File)
 				slog.Info("Update downloaded and extracted.", "version", update.Update.Version)
+				if !keepDownload {
+					err := os.Remove(update.Update.File)
+					if err != nil {
+						slog.Error("Error removing file:", "file", err)
+					}
+				} else {
+					slog.Info("keep_downloads is set to true, not removing downloaded file.", "keep_downloads", keepDownload)
+				}
 				updateVersion(update.Update.Version)
 
 				// Update our local game info after applying the update
