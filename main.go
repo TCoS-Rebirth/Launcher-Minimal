@@ -46,4 +46,11 @@ func main() {
 
 	slog.Info("Finished update loop, launching game.")
 
+	if !gameInfo.NoLaunch {
+		if err := launchGame(); err != nil {
+			slog.Error("Error launching game:", "game", err)
+		}
+	}
+
+	slog.Info("Finished launching game. Goodbye! <3", "game", "launched")
 }

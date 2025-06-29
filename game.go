@@ -2,11 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"golang.org/x/sys/windows"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"syscall"
 	"time"
 )
 
@@ -279,4 +284,50 @@ func updateLoop(updates Updates, game Game) {
 			break // No more updates apply to our version
 		}
 	}
+}
+
+func launchGame() error {
+	// Get the game exe file.
+	exePath := filepath.Join("bin", "client", "Sb_client.exe")
+
+	// Convert to absolute path.
+	absPath, err := filepath.Abs(exePath)
+	if err != nil {
+		slog.Error("Failed to get absolute path:", "error", err)
+		return err
+	}
+
+	slog.Info("Launching game:", "path", absPath)
+
+	exePath = absPath
+
+	cmd := exec.Command(exePath)
+	cmd.Dir = filepath.Dir(exePath)
+
+	if runtime.GOOS == "windows" {
+		verb := "runas"
+		verbPtr, _ := syscall.UTF16PtrFromString(verb)
+		exePath, _ := syscall.UTF16PtrFromString(exePath)
+		argPtr, _ := syscall.UTF16PtrFromString("")
+		cwdPtr, _ := syscall.UTF16PtrFromString("")
+		err := windows.ShellExecute(0, verbPtr, exePath, argPtr, cwdPtr, 1)
+		if err != nil {
+			slog.Error("Failed to launch game:", "error", err)
+			return err
+		}
+	} else {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow:    false,
+			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+			// Request elevation
+
+		}
+		err = cmd.Start()
+		if err != nil {
+			slog.Error("Failed to launch game:", "error", err)
+			return err
+		}
+	}
+
+	return nil
 }
